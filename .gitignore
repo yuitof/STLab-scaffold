@@ -1,0 +1,4 @@
+.DS_Store
+.venv/
+paper/markdown/.preview-state.json
+__pycache__/

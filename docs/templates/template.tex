@@ -1,0 +1,97 @@
+\RequirePackage{plautopatch}
+
+\documentclass[dvipdfmx]{jlreq}		% for platex or uplatex
+%\documentclass{jlreq}		% for lualatex
+%\documentclass[uplatex,ja=standard,dvipdfmx]{bxjsarticle} % for uplatex
+%\documentclass[lualatex,ja=standard]{bxjsarticle}		% for lualatex
+
+\usepackage{graphicx}
+\usepackage{array}
+
+\begin{document}
+
+\begin{center}
+  {\huge{理工学基礎実験レポート}}
+\end{center}
+  
+\vskip3\baselineskip
+
+\begin{table}[!h]
+\renewcommand{\arraystretch}{1.8}
+ \centering
+ \large
+  \begin{tabular}{|p{25mm}|p{122mm}|}
+   \hline
+   実験日 &　年　月　日（火・金）（午前・午後） \\
+   \hline
+   実験題目 &   \\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+  \begin{tabular}{|p{22.5mm}|p{38mm}|p{13mm}|p{13mm}|p{18mm}|p{28mm}|}
+   \hline
+   学科 &　& クラス &　& 学籍番号 &　\\
+   \hline
+   報告者氏名 & \multicolumn{5}{l|}{　} \\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+  \begin{tabular}{|p{22.5mm}|p{60.5mm}|p{60.5mm}|}
+   \hline
+   　&  &　\\
+   \cline{2-3}
+   共同実験者 &　&　\\
+   \cline{2-3}
+   　&  &　\\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+  \begin{tabular}{|p{39mm}|p{108mm}|}
+   \hline
+   レポート提出日 &　年　月　日　時　分 \\
+   \hline
+   改訂レポート提出日 &　年　月　日　時　分 \\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+\begin{flushleft}
+  \begin{tabular}{|p{13.5mm}|p{60.5mm}|}
+   \hline
+   室温 &  \\
+   \hline
+   湿度 &  \\
+   \hline
+   気圧 &  \\
+   \hline
+  \end{tabular}
+\end{flushleft}
+
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+\thispagestyle{empty}
+\clearpage
+\addtocounter{page}{-1}
+%\clearpage
+
+\section{目的}
+\section{実験原理}
+\section{実験方法}
+\section{実験結果}
+\section{考察}
+\section{結論}
+
+\begin{thebibliography}{9}
+%\bibitem[ラベル1] 参考文献その1
+%\bibitem[ラベル2] 参考文献その2
+\end{thebibliography}
+
+\end{document}

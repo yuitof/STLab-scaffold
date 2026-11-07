@@ -1,0 +1,41 @@
+{
+  "task.allowAutomaticTasks": "off",
+  "latex-workshop.formatting.latex": "tex-fmt",
+  "latex-workshop.formatting.tex-fmt.path": "/opt/homebrew/bin/tex-fmt",
+  "[latex]": {
+    "editor.defaultFormatter": "James-Yu.latex-workshop",
+    "editor.formatOnSave": true
+  },
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.latex.recipe.default": "upLaTeX + dvipdfmx",
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "upLaTeX + dvipdfmx",
+      "tools": ["latexmk-uplatex"]
+    }
+  ],
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk-uplatex",
+      "command": "/Library/TeX/texbin/latexmk",
+      "args": [
+        "-pdfdvi",
+        "-latex=uplatex %O %S",
+        "-e",
+        "$dvipdf = \"dvipdfmx %O -o %D %S\";",
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-halt-on-error",
+        "%DOC%"
+      ],
+      "cwd": "%DIR%",
+      "env": {
+        "PATH": "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      }
+    }
+  ],
+  "[markdown]": {
+    "editor.formatOnSave": false
+  }
+}

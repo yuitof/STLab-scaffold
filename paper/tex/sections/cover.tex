@@ -1,0 +1,81 @@
+% !TeX root = ../paper.tex
+% 個人情報は docs/personal_data.md、実験情報は docs 内の資料に基づいて記入する。
+\begingroup
+\newcount\SubmissionHour
+\SubmissionHour=\time
+\divide\SubmissionHour by 60
+\newcount\SubmissionMinute
+\SubmissionMinute=\time
+\advance\SubmissionMinute by -\numexpr60*\SubmissionHour\relax
+
+\begin{center}
+  {\huge{理工学基礎実験レポート}}
+\end{center}
+
+\vskip3\baselineskip
+
+\begin{table}[!h]
+\renewcommand{\arraystretch}{1.8}
+ \centering
+ \large
+  \begin{tabular}{|p{25mm}|p{122mm}|}
+   \hline
+   実験日 &　年　月　日（火・金）（午前・午後） \\
+   \hline
+   実験題目 &   \\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+  \begin{tabular}{|p{22.5mm}|p{38mm}|p{13mm}|p{13mm}|p{18mm}|p{28mm}|}
+   \hline
+   学科 &　& クラス &　& 学籍番号 &　\\
+   \hline
+   報告者氏名 & \multicolumn{5}{l|}{　} \\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+  \begin{tabular}{|p{22.5mm}|p{60.5mm}|p{60.5mm}|}
+   \hline
+   　&  &　\\
+   \cline{2-3}
+   共同実験者 &　&　\\
+   \cline{2-3}
+   　&  &　\\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+  \begin{tabular}{|p{39mm}|p{108mm}|}
+   \hline
+   レポート提出日 & \number\year 年\number\month 月\number\day 日\number\SubmissionHour 時\number\SubmissionMinute 分 \\
+   \hline
+   改訂レポート提出日 &　年　月　日　時　分 \\
+   \hline
+  \end{tabular}
+
+\vskip1.5\baselineskip
+
+\begin{flushleft}
+  \begin{tabular}{|p{13.5mm}|p{60.5mm}|}
+   \hline
+   室温 &  \\
+   \hline
+   湿度 &  \\
+   \hline
+   気圧 &  \\
+   \hline
+  \end{tabular}
+\end{flushleft}
+
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+\thispagestyle{empty}
+\clearpage
+\addtocounter{page}{-1}
+\endgroup
