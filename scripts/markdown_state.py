@@ -137,7 +137,7 @@ def captured_text(path, expected):
 
 
 @contextmanager
-def synchronized_preview(root, timeout=8):
+def synchronized_preview(root, timeout=8, review=False):
     """Borrow an existing watcher or start a bounded, non-detached child."""
     runtime = root / 'temp'
     runtime.mkdir(parents=True, exist_ok=True)
@@ -148,13 +148,20 @@ def synchronized_preview(root, timeout=8):
             borrowed = preview.watcher_running(runtime)
             if not borrowed:
                 program = Path(__file__).resolve().with_name('preview_markdown.py')
+                command = [sys.executable, str(program), '--watch',
+                           '--source-dir', str(root / 'paper/markdown'),
+                           '--runtime-dir', str(runtime)]
+                if review:
+                    command.append('--read-only')
                 process = subprocess.Popen(
-                    [sys.executable, str(program), '--watch',
-                     '--source-dir', str(root / 'paper/markdown'),
-                     '--runtime-dir', str(runtime)],
+                    command,
                     cwd=str(root), stdin=subprocess.DEVNULL,
                     stdout=log, stderr=subprocess.STDOUT,
                 )
+            if review:
+                # Do not request an update from a borrowed writable watcher
+                # when the report still contains unsynchronized saved edits.
+                preview.verify_preview(root / 'paper/markdown')
             request_id = uuid.uuid4().hex
             preview.atomic_write(
                 runtime / 'preview-sync-request.json',
@@ -279,6 +286,7 @@ def run_operation(root, command, arguments, force=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project-root', type=Path, default=Path(__file__).resolve().parent.parent)
+    parser.add_argument('--review', action='store_true', help='Keep report sources read-only; refuse pending preview synchronization.')
     commands = parser.add_subparsers(dest='command', required=True)
     for name, help_text in [
         ('check', 'Report read and LaTeX hash status without advancing either record.'),
@@ -291,6 +299,8 @@ def main():
         if name == 'read':
             command.add_argument('--force', action='store_true', help='Read even unchanged content after context loss.')
     args = parser.parse_args()
+    if args.review and args.command == 'record-latex':
+        parser.error('record-latex is unavailable during a read-only review.')
     root = args.project_root.resolve()
     runtime = root / 'temp'
     runtime.mkdir(parents=True, exist_ok=True)
@@ -300,7 +310,7 @@ def main():
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
                 raise StateError('Another Markdown state command is running; retry shortly.') from error
-            with synchronized_preview(root):
+            with synchronized_preview(root, review=args.review):
                 run_operation(root, args.command, args.files, getattr(args, 'force', False))
     except (OSError, UnicodeError, StateError, preview.SyncError) as error:
         parser.exit(1, 'Markdown state operation failed: {}\n'.format(error))

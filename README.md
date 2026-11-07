@@ -64,6 +64,18 @@ hashes; use `read --force FILE` if the earlier content is no longer in context.
 arguments to process the report's cover and numbered sections. Explicit paths can
 select other Markdown, including `AGENTS.md` and textbook transcriptions.
 
+For confirmation and pre-submission reviews, put `--review` before `check`, `read`,
+or `diff`, for example:
+
+```sh
+/usr/bin/python3 scripts/markdown_state.py --review check
+```
+
+This mode refuses pending preview synchronization. A watcher started for the
+review checks whether Markdown already matches instead of applying saved edits.
+Read-state bookkeeping may update, but report sources remain unchanged and
+`record-latex` is unavailable.
+
 After applying the exact Markdown version you read to LaTeX, record it:
 
 ```sh

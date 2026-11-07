@@ -224,6 +224,64 @@ class MarkdownStateTests(unittest.TestCase):
         self.assertEqual(self.record_bytes(), before)
         self.assertFalse(preview.watcher_running(self.root / 'temp'))
 
+    def test_review_refuses_pending_source_edits_without_applying_them(self):
+        self.run_operation('read')
+        self.write('01.md', '# Pending source edit\n')
+        before = {path.name: path.read_bytes() for path in self.folder.glob('*.md')}
+        records = self.record_bytes()
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(preview.SyncError):
+                with state.synchronized_preview(self.root, review=True):
+                    self.fail('Review should not proceed with pending synchronization.')
+        self.assertEqual(before, {path.name: path.read_bytes() for path in self.folder.glob('*.md')})
+        self.assertEqual(records, self.record_bytes())
+        self.assertFalse(preview.watcher_running(self.root / 'temp'))
+
+    def test_review_refuses_pending_preview_edits_without_applying_them(self):
+        self.run_operation('read')
+        combined = self.folder / 'preview.md'
+        sections = preview.parse_preview(combined.read_text())
+        sections['01.md'] = '# Pending preview edit\n'
+        combined.write_text(preview.render(sections))
+        before = {path.name: path.read_bytes() for path in self.folder.glob('*.md')}
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(preview.SyncError):
+                with state.synchronized_preview(self.root, review=True):
+                    self.fail('Review should not apply pending preview edits.')
+        self.assertEqual(before, {path.name: path.read_bytes() for path in self.folder.glob('*.md')})
+        self.assertFalse(preview.watcher_running(self.root / 'temp'))
+
+    def test_review_uses_read_only_watcher_when_preview_matches(self):
+        self.run_operation('read')
+        before = {path.name: path.stat().st_mtime_ns for path in self.folder.glob('*.md')}
+        with contextlib.redirect_stderr(io.StringIO()):
+            with state.synchronized_preview(self.root, review=True):
+                status = json.loads((self.root / 'temp/preview-watcher.json').read_text())
+                self.assertTrue(status['read_only'])
+        self.assertEqual(before, {path.name: path.stat().st_mtime_ns for path in self.folder.glob('*.md')})
+        self.assertFalse(preview.watcher_running(self.root / 'temp'))
+
+    def test_review_cli_can_record_reads_without_changing_report_sources(self):
+        preview.update_preview(self.folder)
+        before = {path.name: path.read_bytes() for path in self.folder.glob('*.md')}
+        command = [sys.executable, str(Path(state.__file__).resolve()), '--project-root',
+                   str(self.root), '--review', 'read', self.source]
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(self.source, state.load_state(self.root)['hashes'])
+        self.assertEqual(before, {path.name: path.read_bytes() for path in self.folder.glob('*.md')})
+        self.assertFalse(preview.watcher_running(self.root / 'temp'))
+
+    def test_review_cli_rejects_advancing_conversion_history(self):
+        command = [sys.executable, str(Path(state.__file__).resolve()), '--project-root',
+                   str(self.root), '--review', 'record-latex', self.source]
+        before = self.record_bytes()
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unavailable during a read-only review', result.stderr)
+        self.assertEqual(before, self.record_bytes())
+        self.assertFalse(preview.watcher_running(self.root / 'temp'))
+
     def test_cli_defaults_and_shutdown_notice(self):
         command = [sys.executable, str(Path(state.__file__).resolve()), '--project-root', str(self.root), 'check']
         result = subprocess.run(command, capture_output=True, text=True)

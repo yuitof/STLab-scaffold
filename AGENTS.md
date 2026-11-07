@@ -5,7 +5,7 @@
 - Keep the reusable Markdown template, tooling comments, and preview messages in English. Preserve existing TeX templates, including their original Japanese text, unless explicitly asked to edit them. Use the language required by the assignment when writing an actual report.
 - For actual reports written in Japanese, use full-width commas and periods in Japanese prose.
 - You may update this file when you identify useful general rules. Do not add information specific to an individual experiment or report.
-- Before comparing Markdown hashes, verify that this project's `preview_markdown.py --watch` is running and has synchronized saved edits without errors. If it is stopped, start a temporary foreground watcher yourself and wait for successful synchronization before comparing. After the comparisons, stop any watcher you started, including when a check fails or is interrupted, and notify me that `preview_markdown.py` is no longer running. Leave a pre-existing watcher running and report that instead. Do not launch a detached process.
+- Before comparing Markdown hashes against the read or LaTeX synchronization records, verify that this project's `preview_markdown.py --watch` is running and the preview matches saved edits without errors. If it is stopped, start a temporary foreground watcher yourself and wait for a successful synchronization check before comparing. Use a read-only watcher during reviews as described below. After the comparisons, stop any watcher you started, including when a check fails or is interrupted, and notify me that `preview_markdown.py` is no longer running. Leave a pre-existing watcher running and report that instead. Do not launch a detached process.
 - Before rereading a Markdown file, compare its SHA-256 hash with its entry in `temp/markdown-read-state.json`. Reuse previously read content when unchanged, and reread only when the hash changes. An initial read is allowed when the previous content is unavailable, such as after a session or context reset. Record the hash only after successfully reading the content; hash-only checks must not advance the last-read record. Compute hashes without displaying the file contents.
 - Use `scripts/markdown_state.py` for these checks and records instead of recreating hash, snapshot-copying, or watcher-lifecycle code for each task. Its commands manage the watcher automatically; see `README.md` for usage.
 
@@ -116,6 +116,7 @@ Build outputs, watcher runtime files, `.preview-state.json`, Python caches, oper
 - Store the Markdown hashes used for the last successful conversion or synchronization in `temp/markdown-latex-state.json`, separately from the last-read record. Save immutable Markdown snapshots under `temp/markdown-latex-snapshots/<SHA-256>/<project-relative-source-path>`. Update this record and its snapshots with `record-latex` only after applying the changes to LaTeX; rereading alone does not mark changes as synchronized. Use the snapshots to apply changed Markdown portions while preserving unrelated LaTeX-only edits. During read-only reviews, report pending synchronization instead of applying it.
 - Both hash records use JSON with `"version": 1` and a `"hashes"` object mapping project-relative Markdown paths to SHA-256 values. The LaTeX record also has a `"snapshots"` object mapping source paths to their project-relative snapshot paths. Start with empty objects; do not invent conversion history or reuse the preview tool's `.preview-state.json` for these records.
 - Confirmation and pre-submission reviews are read-only by default. Do not change wording in Markdown, TeX, or other report sources as part of checking them. A request to check compliance does not authorize corrections or rewriting.
+- Use `markdown_state.py --review` during these reviews. Read-state and runtime bookkeeping may update, but pending preview edits must be reported instead of applied, and LaTeX synchronization history must not advance. A watcher started for a review checks synchronization without modifying report Markdown.
 - During a confirmation or pre-submission review, report any mistake, ambiguity, or unmet requirement with its location and a proposed correction. Wait for my approval before applying that correction.
 - When converting Markdown to TeX, preserve the draft's wording and make only the formatting changes needed for typesetting. Apply any correction or wording change only when I have explicitly approved it, and keep the original Markdown draft unless I separately ask to update it.
 - Markdown line breaks do not have to be reproduced in LaTeX. Treat ordinary line breaks as drafting choices and arrange prose paragraphs and line wrapping for readability in the typeset report while preserving the wording. Retain breaks needed for mathematical alignment, code, lists, or other meaningful structure.
@@ -145,6 +146,8 @@ Build outputs, watcher runtime files, `.preview-state.json`, Python caches, oper
 - After changing bibliography entries, update the corresponding citations in the active source format: Markdown during drafting, or LaTeX after conversion. Update only the sources and outputs authorized for the current task, regenerating the submission PDF when the task requires it. Leave preserved Markdown drafts unchanged when editing LaTeX.
 
 ## Equations, Figures, and Tables
+
+These typesetting requirements apply to LaTeX and the compiled report. Markdown drafts may remain incomplete while writing.
 
 - Number every displayed equation consecutively throughout the report. Use LaTeX's automatic equation counters and add a unique `\label` for references. Inline expressions do not need equation numbers.
 - In multiline derivations, number each complete equation or transformation step. Continuation lines belonging to the same expression share its number. Preserve page breaks where long derivations require them.
@@ -176,7 +179,7 @@ Build outputs, watcher runtime files, `.preview-state.json`, Python caches, oper
 
 - Use Japan Standard Time (JST, UTC+09:00) for all date and time calculations and cover timestamps.
 - Do not display timezone labels such as `JST` or `UTC+09:00` on the cover or alongside report timestamps.
-- Determine the experiment date as the most recent Friday relative to the current date in JST. The experiment session is in the morning.
+- Use the experiment date already recorded in `data/cover_info.yaml` or explicitly supplied with the experiment materials. If none is provided, determine it as the most recent Friday relative to the current date in JST, with a morning session. Preserve the recorded date during subsequent work.
 - For an initial submission, set the submission date and time to the compilation date and time in JST, and leave the resubmission date blank.
 - For a resubmission, preserve both the experiment date and the original submission date and time. Update the resubmission date and time to the compilation date and time in JST.
 

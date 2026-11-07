@@ -43,7 +43,19 @@ def watcher_running(runtime_dir):
         return False
 
 
-def watch(source_dir, runtime_dir):
+def verify_preview(source_dir):
+    """Check synchronization without changing any Markdown or sync history."""
+    paths = [source_dir / "cover.md", *sorted(source_dir.glob("[0-9][0-9].md"))]
+    sources = {path.name: path.read_text(encoding="utf-8") for path in paths}
+    combined = read_optional(source_dir / "preview.md")
+    if combined is None or parse_preview(combined) != sources:
+        raise SyncError(
+            "Pending preview synchronization. Read-only review cannot apply "
+            "Markdown changes; synchronize the saved edits before reviewing."
+        )
+
+
+def watch(source_dir, runtime_dir, read_only=False):
     """Publish readiness so state tools can request a synchronized preview."""
     runtime_dir.mkdir(parents=True, exist_ok=True)
     status_path = runtime_dir / "preview-watcher.json"
@@ -69,12 +81,16 @@ def watch(source_dir, runtime_dir):
                     "version": 1, "pid": os.getpid(),
                     "source_dir": str(source_dir.resolve()),
                     "status": "ready", "request_id": None,
+                    "read_only": read_only,
                 }
                 try:
                     request = read_optional(request_path)
                     if request is not None:
                         status["request_id"] = json.loads(request)["request_id"]
-                    update_preview(source_dir)
+                    if read_only:
+                        verify_preview(source_dir)
+                    else:
+                        update_preview(source_dir)
                     last_error = None
                 except (OSError, UnicodeError, SyncError, ValueError, KeyError, TypeError) as error:
                     message = str(error)
@@ -259,6 +275,7 @@ def update_preview(folder):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--watch", action="store_true", help="Sync saved changes every 0.5 seconds.")
+    parser.add_argument("--read-only", action="store_true", help="Check preview synchronization without changing Markdown.")
     parser.add_argument(
         "--source-dir", type=Path,
         default=Path(__file__).resolve().parent.parent / "paper" / "markdown",
@@ -272,13 +289,16 @@ def main():
     args = parser.parse_args()
     if not args.watch:
         try:
-            update_preview(args.source_dir)
+            if args.read_only:
+                verify_preview(args.source_dir)
+            else:
+                update_preview(args.source_dir)
         except (OSError, UnicodeError, SyncError) as error:
             parser.exit(1, "Sync deferred: {}\n".format(error))
         return
 
     try:
-        watch(args.source_dir, args.runtime_dir)
+        watch(args.source_dir, args.runtime_dir, args.read_only)
     except (OSError, SyncError) as error:
         parser.exit(1, "Watcher unavailable: {}\n".format(error))
 
