@@ -1,7 +1,7 @@
 # Allowlist for the nested lab-report template repository.
-# Tracked as .git-exclude; keep .git/info/exclude identical.
+# Tracked as exclude; keep .git/info/exclude identical.
 # Include the paths documented in AGENTS.md and empty-folder placeholders.
-# All other untracked files, including generated files, are excluded.
+# All other untracked files, including build and cache files, are excluded.
 *
 
 # Traverse directories so .gitkeep can retain new empty folders too.
@@ -23,17 +23,20 @@
 !/paper/tex/sections/
 !/scripts/
 !/temp/
+!/temp/markdown-latex-snapshots/
 
 # Included files.
-!/.git-exclude
+!/exclude
 !/.gitignore
 !/.vscode/settings.json
 !/.vscode/tasks.json
 !/AGENTS.md
+!/LICENSE
 !/README.md
 !/data/cover_info.example.yaml
 !/docs/instructions/.gitkeep
 !/docs/references/textbooks/assests/.gitkeep
+!/docs/references/textbooks/textbook.md
 !/docs/templates/template.tex
 !/paper/markdown/01.md
 !/paper/markdown/02.md
@@ -55,16 +58,24 @@
 !/paper/tex/sections/07.tex
 !/paper/tex/sections/cover.tex
 !/scripts/preview_markdown.py
+!/scripts/markdown_state.py
+!/scripts/test_markdown_state.py
 !/scripts/test_preview_markdown.py
 !/temp/.gitkeep
+!/temp/markdown-read-state.json
+!/temp/markdown-latex-state.json
 
 # Allow placeholders in included directories.
 !**/.gitkeep
 
-# Temporary storage: include only its placeholder.
+# Temporary storage: include the placeholder, Markdown state, and snapshots.
 /temp/*
 !/temp/
 !/temp/.gitkeep
+!/temp/markdown-read-state.json
+!/temp/markdown-latex-state.json
+!/temp/markdown-latex-snapshots/
+!/temp/markdown-latex-snapshots/**
 
 # Keep excluded historical folders out of the repository.
 **/(old)/

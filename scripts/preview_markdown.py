@@ -2,11 +2,13 @@
 """Synchronize report sections with an editable combined Markdown preview."""
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import signal
 import sys
 import tempfile
 import time
@@ -28,6 +30,71 @@ BLOCK = re.compile(
 
 class SyncError(Exception):
     """An ambiguous edit must be resolved before synchronization can continue."""
+
+
+def watcher_running(runtime_dir):
+    """Use a process-owned lock, rather than trusting a possibly stale PID."""
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    with (runtime_dir / "preview-watcher.lock").open("a+") as stream:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        return False
+
+
+def watch(source_dir, runtime_dir):
+    """Publish readiness so state tools can request a synchronized preview."""
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    status_path = runtime_dir / "preview-watcher.json"
+    request_path = runtime_dir / "preview-sync-request.json"
+    with (runtime_dir / "preview-watcher.lock").open("a+") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise SyncError("A preview watcher is already running in this project.")
+        previous_status = None
+        last_error = None
+        ready = False
+        original_handler = signal.getsignal(signal.SIGTERM)
+
+        def stop(signum, frame):
+            raise SystemExit(0)
+
+        signal.signal(signal.SIGTERM, stop)
+        print("Watching Markdown drafts and preview; press Ctrl+C to stop.", flush=True)
+        try:
+            while True:
+                status = {
+                    "version": 1, "pid": os.getpid(),
+                    "source_dir": str(source_dir.resolve()),
+                    "status": "ready", "request_id": None,
+                }
+                try:
+                    request = read_optional(request_path)
+                    if request is not None:
+                        status["request_id"] = json.loads(request)["request_id"]
+                    update_preview(source_dir)
+                    last_error = None
+                except (OSError, UnicodeError, SyncError, ValueError, KeyError, TypeError) as error:
+                    message = str(error)
+                    status.update(status="error", message=message)
+                    if message != last_error:
+                        print("Sync deferred: " + message, file=sys.stderr, flush=True)
+                        last_error = message
+                serialized = json.dumps(status, indent=2) + "\n"
+                if serialized != previous_status:
+                    atomic_write(status_path, serialized)
+                    previous_status = serialized
+                if not ready:
+                    print("Markdown preview watcher ready.", flush=True)
+                    ready = True
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            signal.signal(signal.SIGTERM, original_handler)
+            status_path.unlink(missing_ok=True)
 
 
 def ordered(names):
@@ -197,6 +264,11 @@ def main():
         default=Path(__file__).resolve().parent.parent / "paper" / "markdown",
         help="Directory containing cover.md and numbered section files.",
     )
+    parser.add_argument(
+        "--runtime-dir", type=Path,
+        default=Path(__file__).resolve().parent.parent / "temp",
+        help="Directory for local watcher status and locks.",
+    )
     args = parser.parse_args()
     if not args.watch:
         try:
@@ -205,25 +277,10 @@ def main():
             parser.exit(1, "Sync deferred: {}\n".format(error))
         return
 
-    print("Watching Markdown drafts and preview; press Ctrl+C to stop.", flush=True)
-    last_error = None
-    ready = False
     try:
-        while True:
-            try:
-                update_preview(args.source_dir)
-                last_error = None
-            except (OSError, UnicodeError, SyncError) as error:
-                message = str(error)
-                if message != last_error:
-                    print("Sync deferred: " + message, file=sys.stderr, flush=True)
-                    last_error = message
-            if not ready:
-                print("Markdown preview watcher ready.", flush=True)
-                ready = True
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        pass
+        watch(args.source_dir, args.runtime_dir)
+    except (OSError, SyncError) as error:
+        parser.exit(1, "Watcher unavailable: {}\n".format(error))
 
 
 if __name__ == "__main__":

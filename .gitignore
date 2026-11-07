@@ -2,3 +2,10 @@
 .venv/
 paper/markdown/.preview-state.json
 __pycache__/
+
+# Ignore temporary contents; retain Markdown state, snapshots, and the placeholder.
+/temp/*
+!/temp/.gitkeep
+!/temp/markdown-read-state.json
+!/temp/markdown-latex-state.json
+!/temp/markdown-latex-snapshots/

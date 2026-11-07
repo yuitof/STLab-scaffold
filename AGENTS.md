@@ -5,6 +5,9 @@
 - Keep the reusable Markdown template, tooling comments, and preview messages in English. Preserve existing TeX templates, including their original Japanese text, unless explicitly asked to edit them. Use the language required by the assignment when writing an actual report.
 - For actual reports written in Japanese, use full-width commas and periods in Japanese prose.
 - You may update this file when you identify useful general rules. Do not add information specific to an individual experiment or report.
+- Before comparing Markdown hashes, verify that this project's `preview_markdown.py --watch` is running and has synchronized saved edits without errors. If it is stopped, start a temporary foreground watcher yourself and wait for successful synchronization before comparing. After the comparisons, stop any watcher you started, including when a check fails or is interrupted, and notify me that `preview_markdown.py` is no longer running. Leave a pre-existing watcher running and report that instead. Do not launch a detached process.
+- Before rereading a Markdown file, compare its SHA-256 hash with its entry in `temp/markdown-read-state.json`. Reuse previously read content when unchanged, and reread only when the hash changes. An initial read is allowed when the previous content is unavailable, such as after a session or context reset. Record the hash only after successfully reading the content; hash-only checks must not advance the last-read record. Compute hashes without displaying the file contents.
+- Use `scripts/markdown_state.py` for these checks and records instead of recreating hash, snapshot-copying, or watcher-lifecycle code for each task. Its commands manage the watcher automatically; see `README.md` for usage.
 
 ## Folder Exclusions
 
@@ -18,28 +21,29 @@
 - Keep an empty `.gitkeep` file in each otherwise empty project folder so Git can track the folder.
 - Treat folders containing only ignored operating-system metadata, such as `.DS_Store`, as empty when adding placeholders.
 - Codex must ignore `.gitkeep` files when searching, reading, analyzing, and processing project content. They are structural placeholders, not report sources or preview inputs.
-- Do not add `.gitkeep` files to `.gitignore`; they must remain available for Git to track.
+- Do not ignore active `.gitkeep` files; use negated patterns when needed to keep them available for Git to track.
 
 ## Project Git Repository
 
 - Each project uses its own Git repository. Initialization and project work may proceed before a parent repository starts tracking the project. Run `git init` only when the project has no existing or temporarily relocated Git metadata.
 - Before the parent runs `git add` or `git commit` on the project while its local `.git` is present, verify that the parent already tracks the project's files as ordinary files. The parent must retain tracking of files excluded only by the project's `.git/info/exclude`; do not replace the project with a submodule or gitlink.
-- If the parent has not started tracking the project, temporarily move its `.git` to `temp/.git` when preparing the initial parent `git add`, without overwriting an existing backup. Stage the project's ordinary files in the parent while keeping the parked metadata out of its index. Once the parent tracks those files, restore `.git`; subsequent parent add and commit operations may proceed with it present. Do not initialize another repository while its metadata is parked. Preserve existing worktree metadata when `.git` is a file.
-- Keep a tracked copy of the exclude rules at `.git-exclude` in the project root. Copy it to `.git/info/exclude` after initialization or cloning, and keep both copies identical. For worktrees, locate the active exclude file with `git rev-parse --git-path info/exclude`.
-- Use an allowlist for the documented project files, `.gitkeep` files, and their parent directories. Keep `(old)` folders, generated files, and other unlisted files excluded. Include `.git-exclude` itself in the allowlist.
-- When the project structure changes, update the diagram below and both exclude-rule copies as needed. Verify that intended files are included and generated or archived files remain excluded.
-- Use `temp/` for temporary files and folders. Track only its `.gitkeep` placeholder in the project repository.
+- If the parent has not started tracking the project, temporarily move its `.git` to `temp/git-backup` when preparing the initial parent `git add`, without overwriting an existing backup. Stage the project's ordinary files in the parent while keeping the parked metadata out of its index. Once the parent tracks those files, restore the backup to `.git`; subsequent parent add and commit operations may proceed with it present. Do not initialize another repository while its metadata is parked. Preserve existing worktree metadata when `.git` is a file.
+- Keep a tracked copy of the exclude rules at `exclude` in the project root. Copy it to `.git/info/exclude` after initialization or cloning, and keep both copies identical. For worktrees, locate the active exclude file with `git rev-parse --git-path info/exclude`.
+- Use an allowlist for the documented project files, `.gitkeep` files, and their parent directories. Keep `(old)` folders, build and cache files, and other unlisted files excluded. Include `exclude` itself in the allowlist.
+- When the project structure changes, update the diagram below and both exclude-rule copies as needed. Verify that intended files are included and build, cache, and archived files remain excluded.
+- Use `temp/` for temporary files and folders. In `.gitignore` and both exclude-rule copies, ignore temporary contents, including `git-backup`, but include `temp/.gitkeep`, `temp/markdown-read-state.json`, `temp/markdown-latex-state.json`, and `temp/markdown-latex-snapshots/` with its contents.
 
 ## Project Structure
 
 ```text
 .
-├── .git-exclude
+├── exclude
 ├── .gitignore
 ├── .vscode
 │   ├── settings.json
 │   └── tasks.json
 ├── AGENTS.md
+├── LICENSE
 ├── README.md
 ├── data
 │   └── cover_info.example.yaml
@@ -47,7 +51,8 @@
 │   ├── instructions
 │   ├── references
 │   │   └── textbooks
-│   │       └── assests
+│   │       ├── assests
+│   │       └── textbook.md
 │   └── templates
 │       └── template.tex
 ├── paper
@@ -62,16 +67,21 @@
 │           ├── 01.tex … 07.tex
 │           └── cover.tex
 ├── scripts
+│   ├── markdown_state.py
 │   ├── preview_markdown.py
+│   ├── test_markdown_state.py
 │   └── test_preview_markdown.py
 └── temp
+    ├── markdown-read-state.json
+    ├── markdown-latex-state.json
+    └── markdown-latex-snapshots
 ```
 
-Generated TeX build files, local synchronization state, Python caches, operating-system metadata, and `.gitkeep` placeholders are omitted from this overview. When starting a report, copy `data/cover_info.example.yaml` to `data/cover_info.yaml` and fill in the report's cover information.
+Build outputs, watcher runtime files, `.preview-state.json`, Python caches, operating-system metadata, and `.gitkeep` placeholders are omitted from this overview. The project-specific `data/cover_info.yaml` is also omitted; initialize it as described under Cover Information.
 
 | Location | Purpose |
 | --- | --- |
-| `.git-exclude` | Tracked copy of the local `.git/info/exclude` rules. |
+| `exclude` | Tracked copy of the local `.git/info/exclude` rules. |
 | `.vscode/` | Editor settings and the manually started Markdown preview task. |
 | `data/` | Raw experimental data and cover information. |
 | `docs/instructions/` | Report requirements and detailed task instructions. |
@@ -81,27 +91,32 @@ Generated TeX build files, local synchronization state, Python caches, operating
 | `paper/tex/` | LaTeX sources, with `paper.tex` importing the cover and section files. |
 | `paper/submission/` | Copies of compiled PDFs named for submission. |
 | `scripts/` | Reusable project tools and their regression tests. Keep automation here, separate from report sources and experimental data. |
-| `temp/` | Temporary files and folders, including temporarily relocated Git metadata when needed. Only `.gitkeep` is tracked by the project repository. |
+| `temp/` | Temporary working files and folders. |
 
 ### Scripts
 
 | Script | Purpose |
 | --- | --- |
 | `scripts/preview_markdown.py` | Two-way Markdown preview synchronization; runs once by default or continuously with `--watch`. |
+| `scripts/markdown_state.py` | Checks hashes, reads changed Markdown, shows changes since LaTeX synchronization, and copies snapshots after completed LaTeX updates. Manages temporary preview watchers automatically. |
+| `scripts/test_markdown_state.py` | Regression tests for state records, snapshots, and watcher ownership. |
 | `scripts/test_preview_markdown.py` | Regression tests for the preview tool; run after changing it. |
 
 ## Report Workflow
 
 1. Read the relevant instructions in `docs/instructions/` and consult the templates in `docs/templates/` before drafting.
-2. Create the report in Markdown first, under `paper/markdown/`. Keep each section in a separate file so it is easy to edit. I will provide most of the content in Markdown.
+2. Create the report in Markdown first, under `paper/markdown/`. Keep each section in a separate file so it is easy to edit. Markdown is a working draft for writing the report and does not have to be polished or perfect. I will provide most of the content in Markdown.
 3. Use `docs/references/` to determine the required content, terminology, and level of detail.
 4. Convert Markdown to LaTeX only when I explicitly ask. Consult the LaTeX template again when converting, and place the sources under `paper/tex/`.
+5. Make requested edits in Markdown while drafting. After conversion, edit LaTeX directly for further corrections. If a Markdown draft changes, also reflect those changes in its corresponding LaTeX. Existing TeX scaffold files alone do not mean the report has been converted.
 
 ## Draft Preservation and Confirmation Reviews
 
-- Preserve the wording of Markdown drafts. They record my starting point, and I may return to them later. Do not rewrite, polish, normalize punctuation, or otherwise edit them unless I explicitly request those changes.
+- Preserve Markdown drafts as a record of my starting point. Edit them when the current drafting task calls for it, but do not polish them merely to make them perfect. After conversion, do not copy later LaTeX corrections back into Markdown unless I explicitly request it.
+- Store the Markdown hashes used for the last successful conversion or synchronization in `temp/markdown-latex-state.json`, separately from the last-read record. Save immutable Markdown snapshots under `temp/markdown-latex-snapshots/<SHA-256>/<project-relative-source-path>`. Update this record and its snapshots with `record-latex` only after applying the changes to LaTeX; rereading alone does not mark changes as synchronized. Use the snapshots to apply changed Markdown portions while preserving unrelated LaTeX-only edits. During read-only reviews, report pending synchronization instead of applying it.
+- Both hash records use JSON with `"version": 1` and a `"hashes"` object mapping project-relative Markdown paths to SHA-256 values. The LaTeX record also has a `"snapshots"` object mapping source paths to their project-relative snapshot paths. Start with empty objects; do not invent conversion history or reuse the preview tool's `.preview-state.json` for these records.
 - Confirmation and pre-submission reviews are read-only by default. Do not change wording in Markdown, TeX, or other report sources as part of checking them. A request to check compliance does not authorize corrections or rewriting.
-- If you find a mistake, error, ambiguity, or unmet requirement, report its location, explain the issue, and propose a correction before changing anything. Wait for my approval of that correction before applying it.
+- During a confirmation or pre-submission review, report any mistake, ambiguity, or unmet requirement with its location and a proposed correction. Wait for my approval before applying that correction.
 - When converting Markdown to TeX, preserve the draft's wording and make only the formatting changes needed for typesetting. Apply any correction or wording change only when I have explicitly approved it, and keep the original Markdown draft unless I separately ask to update it.
 - Markdown line breaks do not have to be reproduced in LaTeX. Treat ordinary line breaks as drafting choices and arrange prose paragraphs and line wrapping for readability in the typeset report while preserving the wording. Retain breaks needed for mathematical alignment, code, lists, or other meaningful structure.
 - After an approved correction, rerun the relevant checks and report the result. If approval is pending, leave the issue open in the confirmation record rather than silently fixing it or marking the report fully checked.
@@ -118,7 +133,7 @@ Generated TeX build files, local synchronization state, Python caches, operating
 - Each project has a corresponding textbook. Store textbook materials under `docs/references/textbooks/`. Look there and in other provided project materials, respecting the folder exclusions. If the textbook cannot be found, ask me to provide it.
 - Before using information from the textbook, create a searchable Markdown transcription alongside the source material at `docs/references/textbooks/textbook.md`. If a transcription already exists, check its coverage and accuracy against the original and reuse it.
 - Transcribe the supplied text faithfully, including headings, equations, tables, figure captions, exercises, and footnotes. Preserve page and item numbers so passages can be traced back to the original. Retain the source files and include image links or clearly marked descriptions for diagrams.
-- Store images extracted from the textbook in `docs/references/textbooks/assests/`, beside `textbook.md`, and use relative Markdown links such as `![Figure description](assests/page-01-figure-01.png)`. Preserve their original captions and page references, and retain the original textbook files.
+- Store images extracted from the textbook in `docs/references/textbooks/assests/`, beside `textbook.md`, and use relative Markdown links such as `![Figure description](assests/page-01-figure-01.png)`. Preserve their original captions and page references.
 - Mark unreadable or uncertain passages explicitly instead of guessing, and distinguish any explanatory additions from the textbook text.
 - Use the verified Markdown transcription for subsequent reference and return to the original when needed to resolve ambiguity. Extend the transcription when additional textbook pages are provided so it remains reusable.
 
@@ -127,7 +142,7 @@ Generated TeX build files, local synchronization state, Python caches, operating
 - Do not include university-provided course materials, such as textbooks, experiment manuals, report instructions, or templates, in the bibliography.
 - Do not assign bibliography numbers to these materials in the report body. When needed, identify them in prose without a numbered citation.
 - List only external literature actually consulted in the bibliography. Keep experimental-data provenance in the report body or analysis records instead of treating the experiment's own records as bibliography entries.
-- After removing or changing bibliography entries, update the corresponding citations in Markdown and TeX and regenerate the submission PDF.
+- After changing bibliography entries, update the corresponding citations in the active source format: Markdown during drafting, or LaTeX after conversion. Update only the sources and outputs authorized for the current task, regenerating the submission PDF when the task requires it. Leave preserved Markdown drafts unchanged when editing LaTeX.
 
 ## Equations, Figures, and Tables
 
@@ -141,7 +156,7 @@ Generated TeX build files, local synchronization state, Python caches, operating
 
 - The existing tool syncs saved edits between `paper/markdown/preview.md` and the separate cover and section files. The preview shows the cover first, then numbered sections in order.
 - Edit section files directly or edit text inside the preview's BEGIN/END SOURCE markers. Keep its header, markers, and separators intact. Add or delete sections through the separate files.
-- Start the watcher manually only while writing a report, and stop it when finished. Do not enable automatic startup or launch detached watchers. See `README.md` for VS Code and terminal commands.
+- For normal report writing, start the watcher manually and stop it when finished. Codex may run a temporary watcher for hash comparisons under the General Rules above. Do not enable workspace automatic startup or launch detached watchers. See `README.md` for VS Code and terminal commands.
 - Keep the local `.preview-state.json` sync history. If a conflict occurs, preserve both versions and resolve it explicitly; never overwrite either version automatically.
 - After changing the tool, run its regression tests and verify saved edits sync in both directions. Stop any test watcher afterward.
 
@@ -149,6 +164,8 @@ Generated TeX build files, local synchronization state, Python caches, operating
 
 ### Sources
 
+- For every new report project, create `data/cover_info.yaml` from that project's `data/cover_info.example.yaml`, then fill in its settings. Do not reuse another project's populated cover file. Preserve an existing file when continuing the same report or preparing a resubmission.
+- Track the reusable example in this template repository; keep the project-specific `cover_info.yaml` outside its allowlist.
 - Use `data/cover_info.yaml` as the source of cover information, including my personal information.
 - If no lab partners are listed in the provided materials, treat the experiment as performed alone. Record an empty list in `lab_partners` and leave the lab-partner field on the cover blank.
 - Find the experiment title in `docs/`, usually in a DOCX file under `docs/templates/`.
