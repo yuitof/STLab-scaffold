@@ -1,0 +1,70 @@
+# Allowlist for the nested lab-report template repository.
+# Tracked as .git-exclude; keep .git/info/exclude identical.
+# Include the paths documented in AGENTS.md and empty-folder placeholders.
+# All other untracked files, including generated files, are excluded.
+*
+
+# Traverse directories so .gitkeep can retain new empty folders too.
+!*/
+
+# Included directories (parents must be traversable).
+!/.vscode/
+!/data/
+!/docs/
+!/docs/instructions/
+!/docs/references/
+!/docs/references/textbooks/
+!/docs/references/textbooks/assests/
+!/docs/templates/
+!/paper/
+!/paper/markdown/
+!/paper/submission/
+!/paper/tex/
+!/paper/tex/sections/
+!/scripts/
+!/temp/
+
+# Included files.
+!/.git-exclude
+!/.gitignore
+!/.vscode/settings.json
+!/.vscode/tasks.json
+!/AGENTS.md
+!/README.md
+!/data/cover_info.example.yaml
+!/docs/instructions/.gitkeep
+!/docs/references/textbooks/assests/.gitkeep
+!/docs/templates/template.tex
+!/paper/markdown/01.md
+!/paper/markdown/02.md
+!/paper/markdown/03.md
+!/paper/markdown/04.md
+!/paper/markdown/05.md
+!/paper/markdown/06.md
+!/paper/markdown/07.md
+!/paper/markdown/cover.md
+!/paper/markdown/preview.md
+!/paper/submission/.gitkeep
+!/paper/tex/paper.tex
+!/paper/tex/sections/01.tex
+!/paper/tex/sections/02.tex
+!/paper/tex/sections/03.tex
+!/paper/tex/sections/04.tex
+!/paper/tex/sections/05.tex
+!/paper/tex/sections/06.tex
+!/paper/tex/sections/07.tex
+!/paper/tex/sections/cover.tex
+!/scripts/preview_markdown.py
+!/scripts/test_preview_markdown.py
+!/temp/.gitkeep
+
+# Allow placeholders in included directories.
+!**/.gitkeep
+
+# Temporary storage: include only its placeholder.
+/temp/*
+!/temp/
+!/temp/.gitkeep
+
+# Keep excluded historical folders out of the repository.
+**/(old)/

@@ -8,9 +8,10 @@
 
 ## Folder Exclusions
 
+- When a file or folder is clearly unnecessary, you may move it into an `(old)` folder in its parent directory. Create that `(old)` folder if needed. Archive items instead of deleting them; if their purpose is uncertain, ask before moving them.
 - Ignore every folder named `(old)` anywhere in this project.
 - Do not search, read, analyze, modify, or reference files inside these folders. Exclude them from recursive searches and file discovery.
-- Access these folders only when I explicitly request it.
+- You may place archived items into `(old)` as described above, without inspecting its existing contents or overwriting existing items. Otherwise, access these folders only when I explicitly request it.
 
 ## Empty Folder Placeholders
 
@@ -19,10 +20,21 @@
 - Codex must ignore `.gitkeep` files when searching, reading, analyzing, and processing project content. They are structural placeholders, not report sources or preview inputs.
 - Do not add `.gitkeep` files to `.gitignore`; they must remain available for Git to track.
 
+## Project Git Repository
+
+- Each project uses its own Git repository. If a parent repository exists, ensure it tracks the project's files as ordinary files before initializing the project repository. The parent must retain tracking of files excluded only by the project's `.git/info/exclude`; do not replace the project with a submodule or gitlink.
+- If the project already has `.git` before the parent starts tracking its files, temporarily move that metadata to `temp/project-git` without overwriting an existing backup. Keep the parked metadata out of the parent's index, let the parent start tracking the project, then restore it to `.git`. Do not initialize another repository while its metadata is parked. Preserve existing worktree metadata when `.git` is a file.
+- Once the parent requirement is satisfied, or if there is no parent repository, run `git init` only when the project has no existing or temporarily relocated Git metadata.
+- Keep a tracked copy of the exclude rules at `.git-exclude` in the project root. Copy it to `.git/info/exclude` after initialization or cloning, and keep both copies identical. For worktrees, locate the active exclude file with `git rev-parse --git-path info/exclude`.
+- Use an allowlist for the documented project files, `.gitkeep` files, and their parent directories. Keep `(old)` folders, generated files, and other unlisted files excluded. Include `.git-exclude` itself in the allowlist.
+- When the project structure changes, update the diagram below and both exclude-rule copies as needed. Verify that intended files are included and generated or archived files remain excluded.
+- Use `temp/` for temporary files and folders. Track only its `.gitkeep` placeholder in the project repository.
+
 ## Project Structure
 
 ```text
 .
+├── .git-exclude
 ├── .gitignore
 ├── .vscode
 │   ├── settings.json
@@ -34,6 +46,8 @@
 ├── docs
 │   ├── instructions
 │   ├── references
+│   │   └── textbooks
+│   │       └── assests
 │   └── templates
 │       └── template.tex
 ├── paper
@@ -47,15 +61,17 @@
 │       └── sections
 │           ├── 01.tex … 07.tex
 │           └── cover.tex
-└── scripts
-    ├── preview_markdown.py
-    └── test_preview_markdown.py
+├── scripts
+│   ├── preview_markdown.py
+│   └── test_preview_markdown.py
+└── temp
 ```
 
 Generated TeX build files, local synchronization state, Python caches, operating-system metadata, and `.gitkeep` placeholders are omitted from this overview. When starting a report, copy `data/cover_info.example.yaml` to `data/cover_info.yaml` and fill in the report's cover information.
 
 | Location | Purpose |
 | --- | --- |
+| `.git-exclude` | Tracked copy of the local `.git/info/exclude` rules. |
 | `.vscode/` | Editor settings and the manually started Markdown preview task. |
 | `data/` | Raw experimental data and cover information. |
 | `docs/instructions/` | Report requirements and detailed task instructions. |
@@ -65,15 +81,14 @@ Generated TeX build files, local synchronization state, Python caches, operating
 | `paper/tex/` | LaTeX sources, with `paper.tex` importing the cover and section files. |
 | `paper/submission/` | Copies of compiled PDFs named for submission. |
 | `scripts/` | Reusable project tools and their regression tests. Keep automation here, separate from report sources and experimental data. |
+| `temp/` | Temporary files and folders, including temporarily relocated Git metadata when needed. Only `.gitkeep` is tracked by the project repository. |
 
 ### Scripts
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/preview_markdown.py` | Synchronizes `cover.md` and numbered Markdown sections with the editable combined `preview.md` in both directions. Runs once by default; `--watch` checks saved changes every 0.5 seconds until stopped. Uses local synchronization hashes to detect conflicts and preserve both versions. |
-| `scripts/test_preview_markdown.py` | Regression tests for synchronization, conflict handling, section additions and deletions, and formatting preservation. Run when changing the synchronization tool; it is not required for normal preview operation. |
-
-Run scripts from the project root with `/usr/bin/python3`, for example `/usr/bin/python3 scripts/preview_markdown.py` or `/usr/bin/python3 scripts/test_preview_markdown.py`. Start watch mode manually only while writing a report, and stop it when finished. See the Automatic Markdown Preview section for task configuration and watcher rules.
+| `scripts/preview_markdown.py` | Two-way Markdown preview synchronization; runs once by default or continuously with `--watch`. |
+| `scripts/test_preview_markdown.py` | Regression tests for the preview tool; run after changing it. |
 
 ## Report Workflow
 
@@ -100,9 +115,10 @@ Run scripts from the project root with `/usr/bin/python3`, for example `/usr/bin
 
 ## Textbook References
 
-- Each project has a corresponding textbook. Look for it under `docs/references/` and in other provided project materials, respecting the folder exclusions. If it cannot be found, ask me to provide it.
-- Before using information from the textbook, create a searchable Markdown transcription alongside the source material, such as `docs/references/textbook/textbook.md`. If a transcription already exists, check its coverage and accuracy against the original and reuse it.
+- Each project has a corresponding textbook. Store textbook materials under `docs/references/textbooks/`. Look there and in other provided project materials, respecting the folder exclusions. If the textbook cannot be found, ask me to provide it.
+- Before using information from the textbook, create a searchable Markdown transcription alongside the source material at `docs/references/textbooks/textbook.md`. If a transcription already exists, check its coverage and accuracy against the original and reuse it.
 - Transcribe the supplied text faithfully, including headings, equations, tables, figure captions, exercises, and footnotes. Preserve page and item numbers so passages can be traced back to the original. Retain the source files and include image links or clearly marked descriptions for diagrams.
+- Store images extracted from the textbook in `docs/references/textbooks/assests/`, beside `textbook.md`, and use relative Markdown links such as `![Figure description](assests/page-01-figure-01.png)`. Preserve their original captions and page references, and retain the original textbook files.
 - Mark unreadable or uncertain passages explicitly instead of guessing, and distinguish any explanatory additions from the textbook text.
 - Use the verified Markdown transcription for subsequent reference and return to the original when needed to resolve ambiguity. Extend the transcription when additional textbook pages are provided so it remains reusable.
 
@@ -121,19 +137,13 @@ Run scripts from the project root with `/usr/bin/python3`, for example `/usr/bin
 - Place figure captions below the figures and table captions above the tables. When several images are presented together, identify each image with its own numbered caption or a titled, lettered panel under a numbered figure.
 - Check the compiled PDF for missing, duplicated, or overlapping numbers and captions. The cover's information fields are form layout, not numbered report tables.
 
-## Automatic Markdown Preview
+## Markdown Preview
 
-- Set up an automatically updated combined Markdown preview in each report project.
-- Generate `paper/markdown/preview.md` by concatenating `cover.md` first, then the numbered section files in ascending order. Keep it in the same folder so relative image links work.
-- Keep `preview.md` editable and synchronize saved changes in both directions with the separate source files. Use explicit BEGIN/END SOURCE markers to identify each section. Edit only the text inside those markers in the preview; keep its header, markers, and separators intact.
-- Create or delete numbered sections through the separate source files. Detect those changes and update the preview without including the preview among its own source inputs.
-- Track the last synchronized section hashes in the ignored `paper/markdown/.preview-state.json`. Merge changes to different sections, but preserve both copies and report a conflict if the same section changes differently on both sides. Never choose a conflicting version automatically.
-- Provide `scripts/preview_markdown.py` with a one-time generation mode and a `--watch` mode. Refresh the preview within about one second of saved changes, and write only when the combined content changes.
-- Configure a manually started background task named `Watch Markdown preview` in `.vscode/tasks.json`, with `instanceLimit` set to `1`. Do not set `runOptions.runOn` to `folderOpen`.
-- Set `"task.allowAutomaticTasks": "off"` in `.vscode/settings.json`. Opening this workspace must not start the watcher. Use an available Python interpreter, with `/usr/bin/python3` on macOS when available, to avoid shell or pyenv startup issues.
-- Run the watcher only while writing a report. Do not launch detached watcher processes or leave a watcher running after verification. Use the VS Code task or a foreground terminal process that can be stopped explicitly.
-- When testing watcher behavior, verify that actual saved changes sync in both directions and stop the test process afterward. Testing the one-time synchronization command alone is insufficient.
-- Document how to start and terminate the task manually and open `preview.md` with VS Code's Markdown preview (`⌘⇧V` on macOS). Saved changes are the update trigger; no manual regeneration should be needed while the watcher runs.
+- The existing tool syncs saved edits between `paper/markdown/preview.md` and the separate cover and section files. The preview shows the cover first, then numbered sections in order.
+- Edit section files directly or edit text inside the preview's BEGIN/END SOURCE markers. Keep its header, markers, and separators intact. Add or delete sections through the separate files.
+- Start the watcher manually only while writing a report, and stop it when finished. Do not enable automatic startup or launch detached watchers. See `README.md` for VS Code and terminal commands.
+- Keep the local `.preview-state.json` sync history. If a conflict occurs, preserve both versions and resolve it explicitly; never overwrite either version automatically.
+- After changing the tool, run its regression tests and verify saved edits sync in both directions. Stop any test watcher afterward.
 
 ## Cover Information
 
